@@ -16,7 +16,7 @@ pub struct Bot{
 }
 
 impl Bot{
-	pub fn collide(&mut self,bot:&mut Bot,_radius:f32){
+	pub fn collide(&mut self,bot:&mut Bot){
 		let a=&mut self.vec;
 		let b=&mut bot.vec;
 
