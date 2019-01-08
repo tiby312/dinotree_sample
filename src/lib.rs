@@ -10,6 +10,7 @@ use ordered_float::NotNan;
 
 use axgeom::Rect;
 
+#[derive(Copy,Clone)]
 pub struct Bot{
 	aabb:axgeom::Rect<NotNan<f32>>,
 	vec:[f32;2]
