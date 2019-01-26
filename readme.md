@@ -1,0 +1,1 @@
+provides a sample distribution of bots to use for examples and tests of dinotree.
