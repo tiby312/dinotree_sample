@@ -2,7 +2,6 @@
 
 extern crate axgeom;
 extern crate ordered_float;
-extern crate dinotree;
 extern crate dists;
 
 use ordered_float::NotNan; 
@@ -12,41 +11,40 @@ use axgeom::Rect;
 
 #[derive(Copy,Clone)]
 pub struct Bot{
-	aabb:axgeom::Rect<NotNan<f32>>,
-	vec:[f32;2]
+	pub acc:usize,
+	id:usize,
+	pos:[f32;2]
 }
 
 impl Bot{
 	pub fn collide(&mut self,bot:&mut Bot){
-		let a=&mut self.vec;
-		let b=&mut bot.vec;
-
-		let mut offsetx=b[0]-a[0];
-		let mut offsety=b[1]-b[1];
-
-		offsetx*=0.001;
-		offsety*=0.001;
-
-		a[0]+=offsetx;
-		b[0]+=offsety;
-
-		//TODO normalize
+		self.acc.wrapping_add(bot.id);
+		bot.acc.wrapping_add(self.id);
 	}
-	pub fn get_vec(&self)->[f32;2]{
-		self.vec
+	pub fn id(&self)->usize{
+		self.id
+	}
+	fn create_aabb(&self,radius:f32)->axgeom::Rect<NotNan<f32>>{
+		unsafe{create_aabb(self.pos,radius)}
 	}
 }
 
-unsafe impl dinotree::HasAabb for Bot{
-	type Num=NotNan<f32>;
-	fn get(&self)->&axgeom::Rect<Self::Num>{
-		&self.aabb
+impl Iterator for SampleBuilderIter{
+	type Item=Bot;
+	fn next(&mut self)->Option<Self::Item>{
+		self.spiral.next().map(|(id,pos)|{
+			let bot=Bot{acc:0,id,pos:[pos[0] as f32,pos[1] as f32]};
+			//let rect=bot.create_aabb(self.radius);
+			bot
+		})
 	}
 }
+impl std::iter::FusedIterator for SampleBuilderIter{}
 
-
-
-
+pub struct SampleBuilderIter{
+	spiral:std::iter::Enumerate<dists::spiral::SpiralF32>,
+	//radius:f32
+}
 
 pub struct SampleBuilder{
 	grow:f64,
@@ -55,28 +53,40 @@ pub struct SampleBuilder{
 }
 
 impl SampleBuilder{
+	pub fn create_aabb(&self,bot:&Bot)->axgeom::Rect<NotNan<f32>>{
+		bot.create_aabb(self.radius)
+	}
 	pub fn new()->SampleBuilder{
 		let grow=1.0;
 		let radius=5.0;
-		let num=10_000;
+		let num=1_000;
 		SampleBuilder{num,grow,radius}
 	}
 
-	pub fn with_num(&mut self,num:usize){
+	pub fn with_grow(&mut self,grow:f64)->&mut Self{
+		self.grow=grow;
+		self
+	}
+	pub fn with_num(&mut self,num:usize)->&mut Self{
 		self.num=num;
+		self
 	}
 
-	pub fn with_radius_of(&mut self,radius:f32){
+	pub fn with_radius_of(&mut self,radius:f32)->&mut Self{
 		self.radius=radius;
+		self
 	}
-
-	pub fn build(self)->Vec<Bot>{
-		let dist=dists::spiral::Spiral::new([0.0,0.0],17.0,self.grow);
-    	
-		let radius=self.radius;
-		dist.take(self.num).map(|a|Bot{aabb:unsafe{create_aabb([a[0] as f32,a[1] as f32],radius)},vec:[0.0;2]}).collect()
+	pub fn build(&self)->SampleBuilderIter{
+		let spiral=dists::spiral::Spiral::new([0.0,0.0],17.0,self.grow).as_f32();
+    	let spiral=spiral.enumerate();
+    	SampleBuilderIter{spiral}
 	}
 }
+/*
+fn is_valid<N:Ord+Copy>(a:&Rect<N>)->bool{
+	a.0[0].left<=a.0[0].right && a.0[1].left<=a.0[1].right
+}
+*/
 
 
 unsafe fn create_aabb(a:[f32;2],radius:f32)->Rect<NotNan<f32>>{
@@ -100,12 +110,13 @@ fn aabb_from_pointf32(p:[f32;2],r:[f32;2])->Rect<f32>{
 
 /*
 fn test_basic(){
-	let bots=dinotree_alg::SampleBuilder::new().build();
-	let tree=dinotree:DinoTreeNoCopyBuilder::new(axgeom::XAXISS,&mut bots);
+	use SampleBuilder;
+	let builder=SampleBuilder::new();
+	let bots=builder.build().collect();
+
+	let tree=dinotree:DinoTreeBuilder::new(axgeom::XAXISS,&mut bots,|a|builder.create_aabb(a));
 	dinotree_alg::QueryBuilder::new(tree.as_ref_mut(),|a,b|{
 		a.collide(b);
 	});
 }
 */
-
-

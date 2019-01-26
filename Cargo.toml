@@ -5,9 +5,6 @@ authors = ["Ken Reed <kenakioreed@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-dists={git="https://github.com/tiby312/dinodists.git"}
+dists= "0.1.5"
 new-ordered-float = "1.0.1"
 axgeom = "1.0.5"
-dinotree = "0.2.7"
-#dinotree_alg="0.2.2"
-
